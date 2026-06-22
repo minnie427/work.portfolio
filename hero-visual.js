@@ -117,10 +117,12 @@ function resize() {
   const contentBottom = siteShell
     ? siteShell.getBoundingClientRect().bottom + window.scrollY
     : document.documentElement.scrollHeight;
+  const visualBleed = Math.max(window.innerHeight * 0.45, 360);
 
   W = window.innerWidth;
   H = Math.max(
-    contentBottom,
+    contentBottom + visualBleed,
+    document.documentElement.scrollHeight + visualBleed,
     window.innerHeight
   );
 
@@ -496,11 +498,13 @@ function initScene() {
 function seedViewport(scrollY = window.scrollY, initial = false) {
   const top = scrollY;
   const bottom = scrollY + window.innerHeight;
+  const isNearPageEnd = bottom > document.documentElement.scrollHeight - window.innerHeight * 0.7;
   const blobCount = initial ? (isMobile ? 3 : 4) : (isMobile ? 1 : 2);
   const textCount = initial ? (isMobile ? 6 : 8) : blobCount;
+  const spawnBottom = isNearPageEnd ? bottom + window.innerHeight * 0.42 : bottom - window.innerHeight * 0.08;
 
   for (let i = 0; i < blobCount; i++) {
-    const y = rand(top + window.innerHeight * 0.12, bottom - window.innerHeight * 0.08);
+    const y = rand(top + window.innerHeight * 0.12, spawnBottom);
     const x = rand(-W * 0.06, W * 1.06);
     spawnBlob(x, y, initial ? 0.82 : 0.9);
   }
@@ -508,7 +512,7 @@ function seedViewport(scrollY = window.scrollY, initial = false) {
   for (let i = 0; i < textCount; i++) {
     spawnText(
       rand(-W * 0.08, W * 0.92),
-      rand(top + window.innerHeight * 0.08, bottom - window.innerHeight * 0.08),
+      rand(top + window.innerHeight * 0.08, spawnBottom),
       !initial
     );
   }
@@ -890,6 +894,26 @@ function initCustomSelects() {
       trigger?.setAttribute("aria-expanded", "false");
     });
   });
+
+  document.querySelectorAll(".contact-form").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      const emptySelect = Array
+        .from(form.querySelectorAll("[data-custom-select] input[required]"))
+        .find((input) => !input.value);
+
+      if (!emptySelect) return;
+
+      const select = emptySelect.closest("[data-custom-select]");
+      const trigger = select?.querySelector(".custom-select-trigger");
+      const label = select?.querySelector("span")?.textContent?.trim() || "필수 항목";
+
+      event.preventDefault();
+      select?.classList.add("is-open");
+      trigger?.setAttribute("aria-expanded", "true");
+      trigger?.focus();
+      alert(`${label}을 선택해 주세요.`);
+    });
+  });
 }
 
 function initFormPerformanceMode() {
@@ -913,15 +937,41 @@ function initFormPerformanceMode() {
 
 function markInteracted() {
   document.body.classList.add("has-interacted");
+  window.setTimeout(() => {
+    document.body.classList.add("is-hint-gone");
+  }, 1300);
 }
 
 function initInteractionHint() {
   const hint = document.querySelector(".interaction-hint");
   if (!hint) return;
 
+  randomizeInteractionHint(hint);
+
   window.setTimeout(() => {
     document.body.classList.add("is-hint-dismissed");
+    window.setTimeout(() => {
+      document.body.classList.add("is-hint-gone");
+    }, 1300);
   }, 5600);
+}
+
+function randomizeInteractionHint(hint) {
+  const hintHues = [24, 34, 142, 150, 174, 206, 224, 248, 318, 352];
+  const shuffledHues = [...hintHues].sort(() => Math.random() - 0.5).slice(0, 4);
+  const positions = [
+    [rand(14, 34), rand(18, 38)],
+    [rand(48, 70), rand(22, 44)],
+    [rand(66, 88), rand(58, 80)],
+    [rand(22, 46), rand(64, 86)]
+  ].sort(() => Math.random() - 0.5);
+
+  shuffledHues.forEach((hue, index) => {
+    const number = index + 1;
+    hint.style.setProperty(`--hint-h${number}`, hue);
+    hint.style.setProperty(`--hint-x${number}`, `${positions[index][0]}%`);
+    hint.style.setProperty(`--hint-y${number}`, `${positions[index][1]}%`);
+  });
 }
 
 addClickPulse(".home-mark, .sticky-inquiry");

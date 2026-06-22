@@ -89,6 +89,7 @@ let lastScrollSpawnAt = 0;
 let lastScrollY = 0;
 let maxSeededScrollBottom = 0;
 let isFormActive = false;
+let sceneInitialized = false;
 
 function rand(min, max) {
   return Math.random() * (max - min) + min;
@@ -111,6 +112,7 @@ function getTextCount() {
 }
 
 function resize() {
+  const previousWidth = W;
   const siteShell = document.querySelector(".site-shell");
   const contentBottom = siteShell
     ? siteShell.getBoundingClientRect().bottom + window.scrollY
@@ -139,7 +141,17 @@ function resize() {
   textCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
   blobCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-  initScene();
+  const shouldResetScene = !sceneInitialized || Math.abs(W - previousWidth) > 12;
+
+  if (shouldResetScene) {
+    initScene();
+    sceneInitialized = true;
+    return;
+  }
+
+  lastScrollY = window.scrollY;
+  maxSeededScrollBottom = Math.max(maxSeededScrollBottom, window.scrollY + window.innerHeight);
+  draw(performance.now() * 0.001);
 }
 
 class Blob {
@@ -356,7 +368,7 @@ class TextBlock {
     if (this.y < -margin) this.y = H + margin;
     if (this.y > H + margin) this.y = -margin;
 
-    if (t - this.lastChange > this.changeEvery) {
+    if (!isMobile && t - this.lastChange > this.changeEvery) {
       this.cols = Math.floor(rand(isMobile ? 8 : 12, isMobile ? 23 : 38));
       this.rowCount = Math.floor(rand(3, isMobile ? 8 : 11));
       this.setText();
@@ -485,7 +497,7 @@ function seedViewport(scrollY = window.scrollY, initial = false) {
   const top = scrollY;
   const bottom = scrollY + window.innerHeight;
   const blobCount = initial ? (isMobile ? 3 : 4) : (isMobile ? 1 : 2);
-  const textCount = initial ? (isMobile ? 6 : 8) : 1;
+  const textCount = initial ? (isMobile ? 6 : 8) : blobCount;
 
   for (let i = 0; i < blobCount; i++) {
     const y = rand(top + window.innerHeight * 0.12, bottom - window.innerHeight * 0.08);
@@ -495,7 +507,7 @@ function seedViewport(scrollY = window.scrollY, initial = false) {
 
   for (let i = 0; i < textCount; i++) {
     spawnText(
-      rand(-W * 0.05, W * 0.92),
+      rand(-W * 0.08, W * 0.92),
       rand(top + window.innerHeight * 0.08, bottom - window.innerHeight * 0.08),
       !initial
     );
@@ -519,11 +531,28 @@ function spawnBlob(x, y, scale = 1) {
 }
 
 function spawnText(x, y, burst = true) {
-  texts.push(new TextBlock(x + rand(-70, 70), y + rand(-55, 55), burst));
+  const text = new TextBlock(x, y, burst);
+  const estimatedWidth = text.cols * text.size * 0.66;
+  const estimatedHeight = text.rowCount * text.size * 1.04;
+
+  text.x = x - estimatedWidth * rand(0.18, 0.82) + rand(-90, 90);
+  text.y = y - estimatedHeight * rand(0.18, 0.82) + rand(-72, 72);
+
+  texts.push(text);
 
   while (texts.length > getTextCount() + 5) {
     texts.shift();
   }
+}
+
+function spawnPointerVisuals(x, y) {
+  const blobX = x + rand(-42, 42);
+  const blobY = y + rand(-42, 42);
+  const textX = x + rand(-120, 120);
+  const textY = y + rand(-96, 96);
+
+  spawnBlob(blobX, blobY);
+  spawnText(textX, textY);
 }
 
 function spawnScrollVisuals() {
@@ -777,15 +806,16 @@ window.addEventListener("pointermove", (event) => {
 });
 
 window.addEventListener("pointerdown", (event) => {
+  markInteracted();
   updatePointer(event);
   pointer.down = true;
 
   playPointerAudio();
-  spawnBlob(pointer.x, pointer.y);
-  spawnText(pointer.x, pointer.y);
+  spawnPointerVisuals(pointer.x, pointer.y);
 });
 
 window.addEventListener("touchstart", (event) => {
+  markInteracted();
   const touch = event.touches[0];
   if (!touch) return;
 
@@ -881,9 +911,23 @@ function initFormPerformanceMode() {
   });
 }
 
+function markInteracted() {
+  document.body.classList.add("has-interacted");
+}
+
+function initInteractionHint() {
+  const hint = document.querySelector(".interaction-hint");
+  if (!hint) return;
+
+  window.setTimeout(() => {
+    document.body.classList.add("is-hint-dismissed");
+  }, 5600);
+}
+
 addClickPulse(".home-mark, .sticky-inquiry");
 initCustomSelects();
 initFormPerformanceMode();
+initInteractionHint();
 
 resize();
 

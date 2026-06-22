@@ -114,8 +114,8 @@ a {
   bottom: clamp(18px, 3vw, 34px);
   z-index: 10;
   display: grid;
-  width: clamp(112px, 14.6vw, 160px);
-  height: clamp(75px, 9.3vw, 104px);
+  width: clamp(56px, 7.3vw, 80px);
+  height: clamp(38px, 4.65vw, 52px);
   place-items: center;
   border-radius: 48% 52% 44% 56% / 55% 45% 52% 48%;
   color: var(--black);
@@ -174,9 +174,9 @@ a {
 .sticky-inquiry span {
   position: relative;
   z-index: 2;
-  max-width: 82px;
+  max-width: 44px;
   text-align: center;
-  font-size: clamp(15px, 1.75vw, 23px);
+  font-size: clamp(10px, 0.9vw, 13px);
   line-height: 1.02;
   font-weight: 900;
   letter-spacing: -0.055em;
@@ -199,6 +199,75 @@ body.is-form-active .sticky-inquiry,
 body.is-form-active .sticky-inquiry::before,
 body.is-form-active .sticky-inquiry::after {
   animation-play-state: paused;
+}
+
+.interaction-hint {
+  position: fixed;
+  left: 50%;
+  bottom: clamp(86px, 12vh, 142px);
+  z-index: 11;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 10px 11px;
+  border: 1.5px solid rgba(8, 8, 8, 0.22);
+  border-radius: 999px;
+  background: rgba(241, 238, 232, 0.62);
+  color: var(--black);
+  font-size: clamp(12px, 1.15vw, 14px);
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 10px);
+  backdrop-filter: blur(12px);
+  animation: hintIn 700ms ease 900ms forwards, hintFloat 1800ms ease-in-out 1600ms infinite alternate;
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.interaction-hint__icon {
+  position: relative;
+  width: 18px;
+  height: 24px;
+  border: 2px solid var(--black);
+  border-radius: 10px 10px 8px 8px;
+}
+
+.interaction-hint__icon::before {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 2px;
+  height: 8px;
+  background: var(--black);
+  border-radius: 2px;
+  content: "";
+  transform: translateX(-50%);
+}
+
+.interaction-hint__icon::after {
+  position: absolute;
+  right: -7px;
+  bottom: -4px;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--black);
+  border-bottom: 2px solid var(--black);
+  border-radius: 0 0 8px 0;
+  content: "";
+  transform: rotate(-16deg);
+}
+
+.interaction-hint__copy--mobile {
+  display: none;
+}
+
+body.has-interacted .interaction-hint,
+body.is-hint-dismissed .interaction-hint {
+  opacity: 0;
+  transform: translate(-50%, 18px);
+  animation: none;
 }
 
 @keyframes inquiryBlob {
@@ -310,6 +379,19 @@ body.is-form-active .sticky-inquiry::after {
     filter: blur(38px) saturate(1.62);
     background-position: 24% 62%, 62% 42%, 44% 46%;
     transform: rotate(-14deg) scale(1.08);
+  }
+}
+
+@keyframes hintIn {
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes hintFloat {
+  to {
+    transform: translate(-50%, -5px);
   }
 }
 
@@ -796,11 +878,11 @@ footer p {
 
   .sticky-inquiry::before {
     inset: -42%;
-    filter: blur(18px) saturate(1.65);
+    filter: blur(18px) saturate(1.95);
     background:
-      radial-gradient(circle at 25% 30%, rgba(80, 235, 130, 1) 0 12%, rgba(80, 235, 130, 0.62) 25%, transparent 47%),
-      radial-gradient(circle at 62% 34%, rgba(52, 100, 245, 1) 0 14%, rgba(52, 100, 245, 0.62) 28%, transparent 51%),
-      radial-gradient(circle at 48% 72%, rgba(238, 63, 122, 0.98) 0 13%, rgba(238, 63, 122, 0.56) 27%, transparent 49%);
+      radial-gradient(circle at 25% 30%, rgba(80, 235, 130, 1) 0 12%, rgba(80, 235, 130, 0.78) 25%, transparent 47%),
+      radial-gradient(circle at 62% 34%, rgba(52, 100, 245, 1) 0 14%, rgba(52, 100, 245, 0.78) 28%, transparent 51%),
+      radial-gradient(circle at 48% 72%, rgba(238, 63, 122, 1) 0 13%, rgba(238, 63, 122, 0.72) 27%, transparent 49%);
   }
 
   .sticky-inquiry::after {
@@ -809,6 +891,19 @@ footer p {
 
   .content-section {
     padding: clamp(190px, 58vw, 380px) 0;
+  }
+
+  .interaction-hint {
+    bottom: 86px;
+    font-size: 13px;
+  }
+
+  .interaction-hint__copy--desktop {
+    display: none;
+  }
+
+  .interaction-hint__copy--mobile {
+    display: inline;
   }
 
   .service-item:last-child,

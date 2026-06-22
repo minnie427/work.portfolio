@@ -223,6 +223,7 @@ body.is-form-active .sticky-inquiry::after {
   font-weight: 850;
   letter-spacing: -0.035em;
   line-height: 1;
+  white-space: nowrap;
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, calc(-50% + 14px)) scale(0.97);
@@ -232,36 +233,32 @@ body.is-form-active .sticky-inquiry::after {
 }
 
 .interaction-hint__icon {
-  position: relative;
-  width: 18px;
-  height: 24px;
-  border: 2px solid var(--black);
-  border-radius: 10px 10px 8px 8px;
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  font-family: "Material Symbols Outlined";
+  font-size: 22px;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  direction: ltr;
+  font-feature-settings: "liga";
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
 }
 
-.interaction-hint__icon::before {
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  width: 2px;
-  height: 8px;
-  background: var(--black);
-  border-radius: 2px;
-  content: "";
-  transform: translateX(-50%);
-}
-
-.interaction-hint__icon::after {
-  position: absolute;
-  right: -7px;
-  bottom: -4px;
-  width: 10px;
-  height: 10px;
-  border-right: 2px solid var(--black);
-  border-bottom: 2px solid var(--black);
-  border-radius: 0 0 8px 0;
-  content: "";
-  transform: rotate(-16deg);
+.interaction-hint__icon--mobile {
+  display: none;
 }
 
 .interaction-hint__copy--mobile {
@@ -539,6 +536,44 @@ h1 {
   margin-bottom: 0;
 }
 
+.showreel-carousel {
+  width: 100vw;
+  margin: clamp(34px, 6vw, 76px) 50% 0;
+  overflow: hidden;
+  transform: translateX(-50%);
+}
+
+.showreel-track {
+  display: flex;
+  width: max-content;
+  gap: clamp(5px, 0.7vw, 9px);
+  padding: 0 var(--page-pad);
+  animation: showreelMove 70s linear infinite;
+}
+
+.showreel-carousel figure {
+  flex: 0 0 auto;
+  height: clamp(360px, 48vw, 680px);
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+}
+
+.showreel-carousel img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+}
+
+@keyframes showreelMove {
+  to {
+    transform: translateX(calc(-50% - clamp(6px, 1vw, 11px)));
+  }
+}
+
 .content-section {
   width: min(100% - var(--page-pad) * 2, 1120px);
   margin: 0 auto;
@@ -548,6 +583,36 @@ h1 {
 .section-heading {
   max-width: 900px;
   margin-bottom: clamp(26px, 4vw, 48px);
+}
+
+.section-intro-copy {
+  max-width: 760px;
+  margin-top: clamp(20px, 3vw, 36px);
+}
+
+.section-intro-copy p {
+  margin-bottom: 14px;
+  font-size: clamp(17px, 2vw, 24px);
+  line-height: 1.42;
+  letter-spacing: -0.025em;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.section-intro-copy p:first-child {
+  color: var(--black);
+}
+
+.section-feature-image {
+  width: min(100%, 860px);
+  margin: clamp(28px, 5vw, 58px) 0 0;
+  overflow: hidden;
+}
+
+.section-feature-image img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 h2 {
@@ -617,8 +682,8 @@ h3 {
 .work-media {
   margin: 0;
   min-height: clamp(260px, 36vw, 520px);
-  border: 2px solid rgba(8, 8, 8, 0.72);
-  background: var(--bg);
+  border: 0;
+  background: transparent;
   overflow: hidden;
 }
 
@@ -873,6 +938,31 @@ footer p {
     min-height: 62vw;
   }
 
+  .showreel-carousel {
+    margin-top: 34px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .showreel-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .showreel-track {
+    gap: 5px;
+    padding-right: calc(var(--page-pad) + 18vw);
+    animation: none;
+  }
+
+  .showreel-carousel figure {
+    height: clamp(230px, 60vw, 320px);
+    scroll-snap-align: start;
+  }
+
   .home-mark {
     top: 18px;
     width: 46px;
@@ -916,7 +1006,23 @@ footer p {
 
   .interaction-hint {
     top: 50%;
-    font-size: 13px;
+    gap: 9px;
+    padding: 12px 15px 12px 13px;
+    font-size: 12.5px;
+  }
+
+  .interaction-hint__icon {
+    width: 21px;
+    height: 21px;
+    font-size: 21px;
+  }
+
+  .interaction-hint__icon--desktop {
+    display: none;
+  }
+
+  .interaction-hint__icon--mobile {
+    display: inline-flex;
   }
 
   .interaction-hint__copy--desktop {
@@ -964,5 +1070,9 @@ footer p {
   #textCanvas,
   #blobCanvas {
     opacity: 0.5;
+  }
+
+  .showreel-track {
+    animation: none;
   }
 }

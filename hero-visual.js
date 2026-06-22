@@ -90,6 +90,8 @@ let lastScrollY = 0;
 let maxSeededScrollBottom = 0;
 let isFormActive = false;
 let sceneInitialized = false;
+let resizeFrame = 0;
+let animationFrame = 0;
 
 function rand(min, max) {
   return Math.random() * (max - min) + min;
@@ -636,7 +638,12 @@ let last = performance.now();
 const frameInterval = 1000 / FPS;
 
 function animate(now) {
-  requestAnimationFrame(animate);
+  animationFrame = requestAnimationFrame(animate);
+
+  if (document.hidden) {
+    last = now;
+    return;
+  }
 
   if (isFormActive) {
     last = now;
@@ -835,7 +842,7 @@ function playPointerAudio() {
 
 window.addEventListener("pointermove", (event) => {
   updatePointer(event);
-});
+}, { passive: true });
 
 window.addEventListener("pointerdown", (event) => {
   markInteracted();
@@ -849,7 +856,7 @@ window.addEventListener("pointerdown", (event) => {
 
   playPointerAudio();
   spawnPointerVisuals(pointer.x, pointer.y);
-});
+}, { passive: true });
 
 window.addEventListener("touchstart", (event) => {
   markInteracted();
@@ -872,8 +879,33 @@ window.addEventListener("pointerleave", () => {
   pointer.down = false;
 });
 
-window.addEventListener("resize", resize);
+window.addEventListener("resize", scheduleResize);
 window.addEventListener("scroll", spawnScrollVisuals, { passive: true });
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (animationFrame) {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+    }
+    return;
+  }
+
+  last = performance.now();
+
+  if (!prefersReducedMotion && animationFrame === 0) {
+    animationFrame = requestAnimationFrame(animate);
+  }
+});
+
+function scheduleResize() {
+  if (resizeFrame) return;
+
+  resizeFrame = requestAnimationFrame(() => {
+    resizeFrame = 0;
+    resize();
+  });
+}
 
 function addClickPulse(selector) {
   document.querySelectorAll(selector).forEach((element) => {
@@ -1077,15 +1109,42 @@ function randomizeInteractionHint(hint) {
   });
 }
 
+function initShowreelCarousel() {
+  if (isMobile || prefersReducedMotion) return;
+
+  const track = document.querySelector(".showreel-track");
+  if (!track || track.dataset.cloned === "true") return;
+
+  const items = Array.from(track.children);
+  const fragment = document.createDocumentFragment();
+
+  items.forEach((item) => {
+    const clone = item.cloneNode(true);
+    const image = clone.querySelector("img");
+
+    clone.setAttribute("aria-hidden", "true");
+    if (image) {
+      image.alt = "";
+      image.loading = "lazy";
+    }
+
+    fragment.appendChild(clone);
+  });
+
+  track.appendChild(fragment);
+  track.dataset.cloned = "true";
+}
+
 addClickPulse(".home-mark, .sticky-inquiry");
 initCustomSelects();
 initFormPerformanceMode();
 initInteractionHint();
+initShowreelCarousel();
 
 resize();
 
 if (prefersReducedMotion) {
   draw(performance.now() * 0.001);
 } else {
-  requestAnimationFrame(animate);
+  animationFrame = requestAnimationFrame(animate);
 }

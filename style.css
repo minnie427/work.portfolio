@@ -749,6 +749,15 @@ h3 {
   margin-top: clamp(54px, 8vw, 110px);
 }
 
+.form-honey {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .contact-form label,
 .custom-select {
   display: grid;
@@ -863,6 +872,27 @@ h3 {
   font-size: 14px;
   font-weight: 900;
   cursor: pointer;
+}
+
+.contact-form button:disabled {
+  cursor: progress;
+  opacity: 0.58;
+}
+
+.form-status {
+  min-height: 1.5em;
+  margin: 4px 0 0;
+  font-size: clamp(14px, 1.4vw, 16px);
+  font-weight: 850;
+  color: var(--muted);
+}
+
+.form-status.is-success {
+  color: var(--black);
+}
+
+.form-status.is-error {
+  color: #9d3d32;
 }
 
 .contact-form .custom-select-trigger {

@@ -491,6 +491,7 @@ function initScene() {
   }
 
   seedViewport(window.scrollY, true);
+  seedPageEndVisuals();
 
   draw(performance.now() * 0.001);
 }
@@ -514,6 +515,33 @@ function seedViewport(scrollY = window.scrollY, initial = false) {
       rand(-W * 0.08, W * 0.92),
       rand(top + window.innerHeight * 0.08, spawnBottom),
       !initial
+    );
+  }
+}
+
+function seedPageEndVisuals() {
+  const siteShell = document.querySelector(".site-shell");
+  const pageBottom = siteShell
+    ? siteShell.getBoundingClientRect().bottom + window.scrollY
+    : document.documentElement.scrollHeight;
+  const start = Math.max(0, pageBottom - window.innerHeight * 1.65);
+  const end = pageBottom - window.innerHeight * 0.02;
+  const blobCount = isMobile ? 7 : 8;
+  const textCount = isMobile ? 5 : 6;
+
+  for (let i = 0; i < blobCount; i++) {
+    spawnBlob(
+      rand(-W * 0.08, W * 1.08),
+      rand(start, end),
+      rand(0.88, 1.18)
+    );
+  }
+
+  for (let i = 0; i < textCount; i++) {
+    spawnText(
+      rand(-W * 0.08, W * 0.92),
+      rand(start, end),
+      false
     );
   }
 }
@@ -814,6 +842,11 @@ window.addEventListener("pointerdown", (event) => {
   updatePointer(event);
   pointer.down = true;
 
+  if (!event.target.closest?.(".contact-form")) {
+    isFormActive = false;
+    document.body.classList.remove("is-form-active");
+  }
+
   playPointerAudio();
   spawnPointerVisuals(pointer.x, pointer.y);
 });
@@ -896,24 +929,94 @@ function initCustomSelects() {
   });
 
   document.querySelectorAll(".contact-form").forEach((form) => {
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
       const emptySelect = Array
         .from(form.querySelectorAll("[data-custom-select] input[required]"))
         .find((input) => !input.value);
 
-      if (!emptySelect) return;
+      if (emptySelect) {
+        const select = emptySelect.closest("[data-custom-select]");
+        const trigger = select?.querySelector(".custom-select-trigger");
+        const label = select?.querySelector("span")?.textContent?.trim() || "필수 항목";
 
-      const select = emptySelect.closest("[data-custom-select]");
-      const trigger = select?.querySelector(".custom-select-trigger");
-      const label = select?.querySelector("span")?.textContent?.trim() || "필수 항목";
+        select?.classList.add("is-open");
+        trigger?.setAttribute("aria-expanded", "true");
+        trigger?.focus();
+        alert(`${label}을 선택해 주세요.`);
+        return;
+      }
 
-      event.preventDefault();
-      select?.classList.add("is-open");
-      trigger?.setAttribute("aria-expanded", "true");
-      trigger?.focus();
-      alert(`${label}을 선택해 주세요.`);
+      if (!form.reportValidity()) return;
+
+      await submitContactForm(form);
     });
   });
+}
+
+async function submitContactForm(form) {
+  const status = form.querySelector(".form-status");
+  const submitButton = form.querySelector("button[type='submit']");
+  const formData = new FormData(form);
+
+  formData.set("_subject", `work.minniepark.art 프로젝트 문의 — ${formData.get("name") || "새 문의"}`);
+
+  if (status) {
+    status.textContent = "문의 내용을 전송하는 중입니다.";
+    status.classList.remove("is-error", "is-success");
+  }
+
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "전송 중";
+  }
+
+  try {
+    const response = await fetch(form.action, {
+      method: "POST",
+      body: formData,
+      headers: {
+        Accept: "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error("Form submission failed");
+    }
+
+    form.reset();
+    form.querySelectorAll("[data-custom-select]").forEach((select) => {
+      const trigger = select.querySelector(".custom-select-trigger");
+      const options = select.querySelectorAll("[role='option']");
+
+      select.classList.remove("has-value", "is-open");
+      trigger.textContent = "";
+      trigger.setAttribute("aria-expanded", "false");
+      options.forEach((option) => option.setAttribute("aria-selected", "false"));
+    });
+
+    if (status) {
+      status.textContent = "문의가 등록되었습니다. 확인 후 이메일로 답변드릴게요.";
+      status.classList.add("is-success");
+    }
+
+    isFormActive = false;
+    document.body.classList.remove("is-form-active");
+    document.activeElement?.blur?.();
+    seedPageEndVisuals();
+    draw(performance.now() * 0.001);
+  } catch (error) {
+    if (status) {
+      status.textContent = "전송에 실패했습니다. 잠시 후 다시 시도하거나 카톡 문의하기를 이용해 주세요.";
+      status.classList.add("is-error");
+    }
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = "빠른 답변받기";
+    }
+  }
 }
 
 function initFormPerformanceMode() {

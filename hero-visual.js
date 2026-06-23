@@ -91,7 +91,12 @@ let maxSeededScrollBottom = 0;
 let isFormActive = false;
 let sceneInitialized = false;
 let resizeFrame = 0;
+let layoutRefreshFrame = 0;
 let animationFrame = 0;
+let isVisualInView = true;
+let lastBottomSeedAt = 0;
+let lastPageEndSeedKey = "";
+let layoutObserver = null;
 
 function rand(min, max) {
   return Math.random() * (max - min) + min;
@@ -102,7 +107,7 @@ function pick(arr) {
 }
 
 function getPageDensity() {
-  return Math.min(isMobile ? 1.55 : 1.45, Math.max(1, H / Math.max(1, window.innerHeight)));
+  return Math.min(isMobile ? 1.9 : 1.8, Math.max(1, H / Math.max(1, window.innerHeight)));
 }
 
 function getMaxBlobCount() {
@@ -115,11 +120,12 @@ function getTextCount() {
 
 function resize() {
   const previousWidth = W;
+  const previousHeight = H;
   const siteShell = document.querySelector(".site-shell");
   const contentBottom = siteShell
     ? siteShell.getBoundingClientRect().bottom + window.scrollY
     : document.documentElement.scrollHeight;
-  const visualBleed = Math.max(window.innerHeight * 0.45, 360);
+  const visualBleed = Math.max(window.innerHeight * 0.9, 720);
 
   W = window.innerWidth;
   H = Math.max(
@@ -155,6 +161,12 @@ function resize() {
 
   lastScrollY = window.scrollY;
   maxSeededScrollBottom = Math.max(maxSeededScrollBottom, window.scrollY + window.innerHeight);
+  updateVisualVisibility();
+
+  if (Math.abs(H - previousHeight) > 80) {
+    seedPageEndVisuals(true);
+  }
+
   draw(performance.now() * 0.001);
 }
 
@@ -439,6 +451,7 @@ function randFrom(seed, min, max) {
 function initScene() {
   blobs = [];
   texts = [];
+  lastPageEndSeedKey = "";
   lastScrollY = window.scrollY;
   maxSeededScrollBottom = window.scrollY + window.innerHeight;
 
@@ -521,21 +534,39 @@ function seedViewport(scrollY = window.scrollY, initial = false) {
   }
 }
 
-function seedPageEndVisuals() {
+function seedPageEndVisuals(force = false) {
   const siteShell = document.querySelector(".site-shell");
+  const contactSection = document.querySelector(".contact-section");
+  const footer = document.querySelector(".contact-section footer");
   const pageBottom = siteShell
     ? siteShell.getBoundingClientRect().bottom + window.scrollY
     : document.documentElement.scrollHeight;
-  const start = Math.max(0, pageBottom - window.innerHeight * 1.65);
-  const end = pageBottom - window.innerHeight * 0.02;
-  const blobCount = isMobile ? 7 : 8;
-  const textCount = isMobile ? 5 : 6;
+  const contactTop = contactSection
+    ? contactSection.getBoundingClientRect().top + window.scrollY
+    : pageBottom - window.innerHeight;
+  const footerTop = footer
+    ? footer.getBoundingClientRect().top + window.scrollY
+    : pageBottom - window.innerHeight * 0.42;
+  const start = Math.max(0, contactTop + window.innerHeight * 0.12);
+  const end = pageBottom + window.innerHeight * 0.22;
+  const footerStart = Math.max(0, footerTop - window.innerHeight * 0.22);
+  const blobCount = isMobile ? 14 : 18;
+  const textCount = isMobile ? 9 : 11;
+  const seedKey = [
+    Math.round(pageBottom / 80),
+    Math.round(footerTop / 80),
+    Math.round(W / 40)
+  ].join(":");
+
+  if (!force && seedKey === lastPageEndSeedKey) return;
+  lastPageEndSeedKey = seedKey;
 
   for (let i = 0; i < blobCount; i++) {
     spawnBlob(
       rand(-W * 0.08, W * 1.08),
       rand(start, end),
-      rand(0.88, 1.18)
+      rand(0.88, 1.18),
+      false
     );
   }
 
@@ -546,16 +577,44 @@ function seedPageEndVisuals() {
       false
     );
   }
+
+  for (let i = 0; i < (isMobile ? 5 : 7); i++) {
+    spawnBlob(
+      rand(-W * 0.06, W * 1.06),
+      rand(footerStart, end),
+      rand(1.02, 1.32),
+      false
+    );
+  }
+
+  const footerMid = footerTop + Math.max(140, pageBottom - footerTop) * 0.5;
+  const footerAnchors = [
+    [0.18, footerStart + window.innerHeight * 0.12, 1.16],
+    [0.56, footerMid, 1.42],
+    [0.86, Math.max(footerTop + 80, pageBottom - window.innerHeight * 0.22), 1.34]
+  ];
+
+  footerAnchors.forEach(([xRatio, y, scale]) => {
+    spawnBlob(W * xRatio, y, scale, false);
+  });
+
+  for (let i = 0; i < (isMobile ? 3 : 4); i++) {
+    spawnText(
+      rand(-W * 0.04, W * 0.9),
+      rand(footerStart, pageBottom),
+      false
+    );
+  }
 }
 
-function spawnBlob(x, y, scale = 1) {
+function spawnBlob(x, y, scale = 1, strong = true) {
   blobs.push(
     new Blob(
       x,
       y,
       rand(isMobile ? 58 : 78, isMobile ? 118 : 165) * scale,
       pick(hues),
-      true
+      strong
     )
   );
 
@@ -587,6 +646,18 @@ function spawnPointerVisuals(x, y) {
 
   spawnBlob(blobX, blobY);
   spawnText(textX, textY);
+}
+
+function ensureBottomVisualAt(y) {
+  const siteShell = document.querySelector(".site-shell");
+  const pageBottom = siteShell
+    ? siteShell.getBoundingClientRect().bottom + window.scrollY
+    : document.documentElement.scrollHeight;
+
+  if (y < pageBottom - window.innerHeight * 1.2) return;
+
+  spawnBlob(rand(-W * 0.05, W * 1.05), rand(y - 120, pageBottom + 120), rand(0.95, 1.2), false);
+  spawnText(rand(-W * 0.05, W * 0.92), rand(y - 100, pageBottom + 80), false);
 }
 
 function spawnScrollVisuals() {
@@ -640,7 +711,7 @@ const frameInterval = 1000 / FPS;
 function animate(now) {
   animationFrame = requestAnimationFrame(animate);
 
-  if (document.hidden) {
+  if (document.hidden || !isVisualInView) {
     last = now;
     return;
   }
@@ -845,6 +916,8 @@ window.addEventListener("pointermove", (event) => {
 }, { passive: true });
 
 window.addEventListener("pointerdown", (event) => {
+  if (event.pointerType === "touch") return;
+
   markInteracted();
   updatePointer(event);
   pointer.down = true;
@@ -856,6 +929,7 @@ window.addEventListener("pointerdown", (event) => {
 
   playPointerAudio();
   spawnPointerVisuals(pointer.x, pointer.y);
+  ensureBottomVisualAt(pointer.y);
 }, { passive: true });
 
 window.addEventListener("touchstart", (event) => {
@@ -868,6 +942,8 @@ window.addEventListener("touchstart", (event) => {
   pointer.active = true;
 
   playPointerAudio();
+  spawnPointerVisuals(pointer.x, pointer.y);
+  ensureBottomVisualAt(pointer.y);
 }, { passive: true });
 
 window.addEventListener("pointerup", () => {
@@ -880,7 +956,7 @@ window.addEventListener("pointerleave", () => {
 });
 
 window.addEventListener("resize", scheduleResize);
-window.addEventListener("scroll", spawnScrollVisuals, { passive: true });
+window.addEventListener("scroll", handleScroll, { passive: true });
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
@@ -905,6 +981,63 @@ function scheduleResize() {
     resizeFrame = 0;
     resize();
   });
+}
+
+function scheduleLayoutRefresh() {
+  if (layoutRefreshFrame) return;
+
+  layoutRefreshFrame = requestAnimationFrame(() => {
+    layoutRefreshFrame = 0;
+    scheduleResize();
+
+    requestAnimationFrame(() => {
+      if (!sceneInitialized) return;
+
+      seedPageEndVisuals(true);
+      draw(performance.now() * 0.001);
+    });
+  });
+}
+
+function initLayoutObservers() {
+  const siteShell = document.querySelector(".site-shell");
+  const contactSection = document.querySelector(".contact-section");
+
+  if ("ResizeObserver" in window) {
+    layoutObserver = new ResizeObserver(scheduleLayoutRefresh);
+
+    if (siteShell) layoutObserver.observe(siteShell);
+    if (contactSection) layoutObserver.observe(contactSection);
+  }
+
+  document.querySelectorAll("img").forEach((image) => {
+    if (image.complete) return;
+
+    image.addEventListener("load", scheduleLayoutRefresh, { once: true });
+    image.addEventListener("error", scheduleLayoutRefresh, { once: true });
+  });
+
+  window.addEventListener("load", scheduleLayoutRefresh, { once: true });
+}
+
+function handleScroll() {
+  updateVisualVisibility();
+  spawnScrollVisuals();
+
+  const now = performance.now();
+  const siteShell = document.querySelector(".site-shell");
+  const pageBottom = siteShell
+    ? siteShell.getBoundingClientRect().bottom + window.scrollY
+    : document.documentElement.scrollHeight;
+
+  if (window.scrollY + window.innerHeight > pageBottom - window.innerHeight * 1.05 && now - lastBottomSeedAt > 900) {
+    lastBottomSeedAt = now;
+    seedPageEndVisuals();
+  }
+}
+
+function updateVisualVisibility() {
+  isVisualInView = window.scrollY < H && window.scrollY + window.innerHeight > 0;
 }
 
 function addClickPulse(selector) {
@@ -1078,10 +1211,10 @@ function markInteracted() {
 }
 
 function initInteractionHint() {
-  const hint = document.querySelector(".interaction-hint");
-  if (!hint) return;
+  const hints = document.querySelectorAll(".interaction-hint");
+  if (hints.length === 0) return;
 
-  randomizeInteractionHint(hint);
+  hints.forEach(randomizeInteractionHint);
 
   window.setTimeout(() => {
     document.body.classList.add("is-hint-dismissed");
@@ -1109,37 +1242,111 @@ function randomizeInteractionHint(hint) {
   });
 }
 
-function initShowreelCarousel() {
-  if (isMobile || prefersReducedMotion) return;
+function initShowreelControls() {
+  const carousel = document.querySelector(".showreel-carousel");
+  const track = carousel?.querySelector(".showreel-track");
+  const previousButton = carousel?.querySelector(".showreel-nav--prev");
+  const nextButton = carousel?.querySelector(".showreel-nav--next");
 
-  const track = document.querySelector(".showreel-track");
-  if (!track || track.dataset.cloned === "true") return;
+  if (!carousel || !track || !previousButton || !nextButton) return;
 
-  const items = Array.from(track.children);
-  const fragment = document.createDocumentFragment();
+  const originalItems = Array.from(track.querySelectorAll("figure"));
 
-  items.forEach((item) => {
-    const clone = item.cloneNode(true);
-    const image = clone.querySelector("img");
+  if (originalItems.length === 0) return;
 
-    clone.setAttribute("aria-hidden", "true");
-    if (image) {
-      image.alt = "";
-      image.loading = "lazy";
+  if (!isMobile && !track.dataset.loopReady) {
+    const beforeFragment = document.createDocumentFragment();
+    const afterFragment = document.createDocumentFragment();
+
+    originalItems.forEach((item) => {
+      const beforeClone = item.cloneNode(true);
+      const afterClone = item.cloneNode(true);
+
+      beforeClone.dataset.clone = "true";
+      afterClone.dataset.clone = "true";
+      beforeClone.setAttribute("aria-hidden", "true");
+      afterClone.setAttribute("aria-hidden", "true");
+      beforeClone.querySelector("img")?.setAttribute("alt", "");
+      afterClone.querySelector("img")?.setAttribute("alt", "");
+      beforeFragment.appendChild(beforeClone);
+      afterFragment.appendChild(afterClone);
+    });
+
+    track.prepend(beforeFragment);
+    track.append(afterFragment);
+    track.dataset.loopReady = "true";
+  }
+
+  const getGap = () => parseFloat(getComputedStyle(track).gap) || 0;
+
+  const getStep = () => {
+    const firstItem = track.querySelector("figure:not([data-clone])");
+    const gap = getGap();
+
+    return firstItem ? firstItem.getBoundingClientRect().width + gap : carousel.clientWidth * 0.8;
+  };
+
+  const getLoopWidth = () => {
+    const gap = getGap();
+
+    return originalItems.reduce((total, item) => total + item.getBoundingClientRect().width + gap, 0);
+  };
+
+  const setInitialLoopPosition = () => {
+    if (isMobile) return;
+
+    const loopWidth = getLoopWidth();
+
+    if (loopWidth > 0) {
+      carousel.scrollLeft = loopWidth;
     }
+  };
 
-    fragment.appendChild(clone);
+  const normalizeLoopPosition = () => {
+    if (isMobile) return;
+
+    const loopWidth = getLoopWidth();
+
+    if (loopWidth <= 0) return;
+
+    if (carousel.scrollLeft < loopWidth * 0.35) {
+      carousel.scrollLeft += loopWidth;
+    } else if (carousel.scrollLeft > loopWidth * 1.65) {
+      carousel.scrollLeft -= loopWidth;
+    }
+  };
+
+  let loopFrame = 0;
+
+  carousel.addEventListener("scroll", () => {
+    if (loopFrame) return;
+
+    loopFrame = requestAnimationFrame(() => {
+      loopFrame = 0;
+      normalizeLoopPosition();
+    });
+  }, { passive: true });
+
+  previousButton.addEventListener("click", () => {
+    normalizeLoopPosition();
+    carousel.scrollBy({ left: -getStep(), behavior: "smooth" });
   });
 
-  track.appendChild(fragment);
-  track.dataset.cloned = "true";
+  nextButton.addEventListener("click", () => {
+    normalizeLoopPosition();
+    carousel.scrollBy({ left: getStep(), behavior: "smooth" });
+  });
+
+  requestAnimationFrame(setInitialLoopPosition);
+  window.addEventListener("load", setInitialLoopPosition, { once: true });
 }
 
 addClickPulse(".home-mark, .sticky-inquiry");
 initCustomSelects();
 initFormPerformanceMode();
 initInteractionHint();
-initShowreelCarousel();
+initShowreelControls();
+initLayoutObservers();
 
 resize();
 

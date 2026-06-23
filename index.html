@@ -24,11 +24,13 @@
     <span>프로젝트 문의</span>
   </a>
 
-  <div class="interaction-hint" aria-live="polite">
-    <span class="interaction-hint__icon interaction-hint__icon--desktop material-symbols-outlined" aria-hidden="true">ads_click</span>
-    <span class="interaction-hint__icon interaction-hint__icon--mobile material-symbols-outlined" aria-hidden="true">touch_app</span>
-    <span class="interaction-hint__copy interaction-hint__copy--mobile">이 화면은 터치에 반응합니다</span>
-    <span class="interaction-hint__copy interaction-hint__copy--desktop">이 화면은 클릭에 반응합니다</span>
+  <div class="interaction-hint interaction-hint--desktop" aria-live="polite">
+    <span class="interaction-hint__icon material-symbols-outlined" aria-hidden="true"></span>
+    <span class="interaction-hint__copy">이 화면은 클릭에 반응합니다</span>
+  </div>
+  <div class="interaction-hint interaction-hint--mobile" aria-live="polite">
+    <span class="interaction-hint__icon material-symbols-outlined" aria-hidden="true"></span>
+    <span class="interaction-hint__copy">이 화면은 터치에 반응합니다</span>
   </div>
 
   <main class="site-shell">
@@ -52,6 +54,7 @@
       </p>
       <p>Touch becomes signal. Signal becomes colour. Colour becomes emotional atmosphere.</p>
       <div class="showreel-carousel" aria-label="Showreel image carousel">
+        <button class="showreel-nav showreel-nav--prev" type="button" aria-label="Previous showreel image"></button>
         <div class="showreel-track">
           <figure><img src="./images/showreel1.png" alt="Showreel image 1" loading="lazy" /></figure>
           <figure><img src="./images/showreel2.png" alt="Showreel image 2" loading="lazy" /></figure>
@@ -72,6 +75,7 @@
           <figure><img src="./images/showreel17.png" alt="Showreel image 17" loading="lazy" /></figure>
           <figure><img src="./images/showreel18.png" alt="Showreel image 18" loading="lazy" /></figure>
         </div>
+        <button class="showreel-nav showreel-nav--next" type="button" aria-label="Next showreel image"></button>
       </div>
     </section>
 
@@ -140,7 +144,7 @@
           </figure>
           <div class="work-copy">
             <p class="work-index">02 / Large-scale Media Art Visuals</p>
-            <h3>PayPal—Melbourne Fashion Festival</h3>
+            <h3>PayPal — Melbourne Fashion Festival</h3>
             <p>대형 패션 / 문화행사 맥락에서 상영된 미디어아트 비주얼과 스크린 기반 이벤트 콘텐츠.</p>
             <p class="small-copy">대형 스크린, 문화행사, 페스티벌, 공간형 미디어 연출에 적용할 수 있습니다.</p>
           </div>
@@ -154,7 +158,7 @@
             <p class="work-index">03 / Interactive Installation</p>
             <h3>The Meta Rose Project</h3>
             <p>장미를 촉각 인터페이스로 사용해 실시간 사운드와 비주얼을 작동시키는 인터랙티브 오디오비주얼 설치 작업.</p>
-            <p class="small-copy">브랜드 팝업, 인터랙티브 부스, 감각적 사진 모먼트, 체험형 소매 공간에 적용할 수 있습니다.</p>
+            <p class="small-copy">브랜드 팝업, 인터랙티브 부스, 촬영과 공유가 가능한 브랜드 모먼트, 체험형 소매 공간에 적용할 수 있습니다.</p>
           </div>
         </article>
 
@@ -269,7 +273,7 @@
           <button class="custom-select-trigger" type="button" aria-label="예상 예산 범위 선택" aria-haspopup="listbox" aria-expanded="false"></button>
           <div class="custom-select-options" role="listbox">
             <button type="button" role="option" data-value="미정 / 먼저 논의하고 싶습니다">미정 / 먼저 논의하고 싶습니다</button>
-            <button type="button" role="option" data-value="100만–300만원">100만–300만원</button>
+            <button type="button" role="option" data-value="100만–300만원">300만원 미만</button>
             <button type="button" role="option" data-value="300만–700만원">300만–700만원</button>
             <button type="button" role="option" data-value="700만–1,500만원">700만–1,500만원</button>
             <button type="button" role="option" data-value="1,500만–3,000만원">1,500만–3,000만원</button>
@@ -280,7 +284,7 @@
           <span>문의 내용</span>
           <textarea name="message" rows="6" required></textarea>
         </label>
-        <button type="submit">문의 전송하기</button>
+        <button type="submit">문의 보내기</button>
         <p class="form-status" role="status" aria-live="polite"></p>
       </form>
 
@@ -292,7 +296,7 @@
 
       <footer>
         <p>minniepark.studio@gmail.com <br>/ @minniepark.studio</p>
-        <p>Based in Seoul / working internationally.</p>
+        <p>Based in Seoul and Melbourne, working internationally.</p>
         <p>© 2026 minniepark.studio. All rights reserved.</p>
       </footer>
     </section>

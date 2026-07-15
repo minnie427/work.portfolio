@@ -39,15 +39,18 @@ a {
 }
 
 .hero-visual {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
+  bottom: 0;
   z-index: 0;
+  contain: strict;
   overflow: hidden;
   background: var(--bg);
   pointer-events: none;
   touch-action: pan-y;
+  transform: translateZ(0);
 }
 
 #textCanvas,
@@ -66,7 +69,7 @@ a {
 #blobCanvas {
   z-index: 2;
   opacity: 0.88;
-  mix-blend-mode: multiply;
+  mix-blend-mode: normal;
 }
 
 .site-shell {
@@ -123,60 +126,44 @@ a {
   isolation: isolate;
   overflow: visible;
   background: transparent;
+  filter: none;
   translate: 0 0;
   transform: translateZ(0);
   transition: transform 220ms ease;
-  animation: inquiryFloat 36s ease-in-out infinite alternate;
-  will-change: translate, transform;
+  animation: none;
+  will-change: translate, transform, filter;
 }
 
 .sticky-inquiry::before {
-  position: absolute;
-  inset: -72%;
-  z-index: 0;
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(25, 222, 92, 1) 0 10%, rgba(25, 222, 92, 0.94) 19%, transparent 34%),
-    radial-gradient(circle at 38% 36%, rgba(34, 84, 255, 1) 0 12%, rgba(34, 84, 255, 0.94) 22%, transparent 38%),
-    radial-gradient(circle at 70% 25%, rgba(238, 28, 104, 1) 0 11%, rgba(238, 28, 104, 0.9) 23%, transparent 39%),
-    radial-gradient(circle at 84% 62%, rgba(255, 132, 20, 1) 0 10%, rgba(255, 132, 20, 0.86) 21%, transparent 36%),
-    radial-gradient(circle at 28% 82%, rgba(246, 229, 28, 1) 0 10%, rgba(246, 229, 28, 0.82) 22%, transparent 38%),
-    radial-gradient(circle at 60% 78%, rgba(0, 210, 220, 1) 0 11%, rgba(0, 210, 220, 0.88) 22%, transparent 38%);
-  background-size:
-    118% 118%,
-    124% 124%,
-    120% 120%,
-    116% 116%,
-    122% 122%,
-    118% 118%;
-  filter: blur(24px) saturate(2.7) contrast(1.12);
+  display: none;
   content: "";
-  transform: scale(0.96);
-  animation: inquiryBlob 4.8s ease-in-out infinite alternate;
-  will-change: transform, background-position, filter;
 }
 
 .sticky-inquiry::after {
+  display: none;
+  content: none;
+}
+
+.sticky-inquiry__blob {
   position: absolute;
-  inset: -58%;
+  left: 50%;
+  top: 50%;
   z-index: 0;
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 24% 50%, rgba(112, 52, 255, 1) 0 12%, rgba(112, 52, 255, 0.72) 23%, transparent 36%),
-    radial-gradient(circle at 72% 54%, rgba(0, 170, 255, 1) 0 13%, rgba(0, 170, 255, 0.7) 24%, transparent 36%),
-    radial-gradient(circle at 52% 34%, rgba(255, 72, 78, 0.98) 0 10%, rgba(255, 72, 78, 0.68) 21%, transparent 34%);
-  filter: blur(28px) saturate(2.45) contrast(1.08);
-  content: "";
-  animation: inquiryBlobSecondary 5.6s ease-in-out infinite alternate-reverse;
-  will-change: transform, background-position, filter;
+  display: block;
+  width: 300%;
+  height: 400%;
+  opacity: 0.92;
+  pointer-events: none;
+  filter: blur(12px);
+  transform: translate(-50%, -50%);
 }
 
 .sticky-inquiry span {
   position: relative;
   z-index: 2;
-  max-width: 44px;
+  max-width: 52px;
   text-align: center;
-  font-size: clamp(10px, 0.9vw, 13px);
+  font-size: 13px;
   line-height: 1.02;
   font-weight: 900;
   letter-spacing: -0.055em;
@@ -187,18 +174,11 @@ a {
 
 .sticky-inquiry:hover,
 .sticky-inquiry:focus-visible {
-  animation-play-state: paused;
   transform: scale(1.16) rotate(-2deg);
 }
 
 .sticky-inquiry.is-clicked {
   animation: inquiryClick 320ms ease-out;
-}
-
-body.is-form-active .sticky-inquiry,
-body.is-form-active .sticky-inquiry::before,
-body.is-form-active .sticky-inquiry::after {
-  animation-play-state: paused;
 }
 
 .interaction-hint {
@@ -283,118 +263,6 @@ body.is-hint-dismissed .interaction-hint {
 
 body.is-hint-gone .interaction-hint {
   display: none;
-}
-
-@keyframes inquiryBlob {
-  0% {
-    filter: blur(30px) saturate(1.55);
-    background-position:
-      0% 4%,
-      18% 12%,
-      74% 8%,
-      96% 58%,
-      20% 90%,
-      58% 82%;
-    transform: rotate(0deg) scale(0.98);
-  }
-
-  50% {
-    filter: blur(36px) saturate(1.7);
-    background-position:
-      12% 18%,
-      32% 4%,
-      64% 26%,
-      86% 44%,
-      28% 76%,
-      48% 92%;
-    transform: rotate(-10deg) scale(1.08);
-  }
-
-  100% {
-    filter: blur(32px) saturate(1.62);
-    background-position:
-      20% 6%,
-      10% 28%,
-      78% 20%,
-      72% 70%,
-      8% 72%,
-      64% 66%;
-    transform: rotate(12deg) scale(1.02);
-  }
-}
-
-@keyframes inquiryFloat {
-  0% {
-    translate: 0 0;
-  }
-
-  12% {
-    translate: calc(-1 * min(7vw, 82px)) calc(-1 * min(16vh, 150px));
-  }
-
-  27% {
-    translate: calc(-1 * min(23vw, 250px)) calc(-1 * min(8vh, 78px));
-  }
-
-  43% {
-    translate: calc(-1 * min(13vw, 140px)) calc(-1 * min(26vh, 250px));
-  }
-
-  61% {
-    translate: calc(-1 * min(30vw, 330px)) calc(-1 * min(20vh, 190px));
-  }
-
-  78% {
-    translate: calc(-1 * min(9vw, 96px)) calc(-1 * min(10vh, 96px));
-  }
-
-  100% {
-    translate: calc(-1 * min(20vw, 220px)) calc(-1 * min(30vh, 280px));
-  }
-}
-
-@keyframes inquiryFloatMobile {
-  0% {
-    translate: 0 0;
-  }
-
-  14% {
-    translate: -28px -92px;
-  }
-
-  31% {
-    translate: calc(-1 * min(42vw, 150px)) -38px;
-  }
-
-  49% {
-    translate: -16px calc(-1 * min(30vh, 210px));
-  }
-
-  68% {
-    translate: calc(-1 * min(34vw, 128px)) calc(-1 * min(20vh, 150px));
-  }
-
-  84% {
-    translate: -58px -24px;
-  }
-
-  100% {
-    translate: calc(-1 * min(46vw, 166px)) calc(-1 * min(28vh, 190px));
-  }
-}
-
-@keyframes inquiryBlobSecondary {
-  0% {
-    filter: blur(32px) saturate(1.45);
-    background-position: 8% 46%, 80% 54%, 54% 26%;
-    transform: rotate(0deg) scale(0.96);
-  }
-
-  100% {
-    filter: blur(38px) saturate(1.62);
-    background-position: 24% 62%, 62% 42%, 44% 46%;
-    transform: rotate(-14deg) scale(1.08);
-  }
 }
 
 @keyframes hintIn {
@@ -997,6 +865,12 @@ footer p {
   font-weight: 800;
 }
 
+.post-footer-visual-space {
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+}
+
 @media (max-width: 1024px) {
   .service-grid,
   .type-columns,
@@ -1068,21 +942,12 @@ footer p {
     bottom: 18px;
     width: 54px !important;
     height: 42px !important;
-    animation: inquiryFloatMobile 32s ease-in-out infinite alternate;
+    animation: none;
   }
 
   .sticky-inquiry span {
     max-width: 52px;
     font-size: 13px;
-  }
-
-  .sticky-inquiry::before {
-    inset: -42%;
-    filter: blur(17px) saturate(2.75) contrast(1.14);
-    background:
-      radial-gradient(circle at 25% 30%, rgba(25, 222, 92, 1) 0 14%, rgba(25, 222, 92, 0.98) 28%, transparent 50%),
-      radial-gradient(circle at 62% 34%, rgba(34, 84, 255, 1) 0 16%, rgba(34, 84, 255, 0.98) 31%, transparent 53%),
-      radial-gradient(circle at 48% 72%, rgba(238, 28, 104, 1) 0 15%, rgba(238, 28, 104, 0.94) 30%, transparent 52%);
   }
 
   .sticky-inquiry::after {
@@ -1137,7 +1002,7 @@ footer p {
 
   .contact-section .contact-actions {
     gap: 16px;
-    margin-bottom: clamp(96px, 24vh, 220px);
+    margin-bottom: 32px;
   }
 
   .contact-section .contact-actions a {

@@ -10,11 +10,12 @@ const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)
 
 let W = 0;
 let H = 0;
+let VIEW_H = 0;
 let DPR = 1;
 
 const FPS = prefersReducedMotion ? 8 : isMobile ? 22 : 32;
-const MAX_BLOBS = isMobile ? 12 : 17;
-const TEXT_COUNT = isMobile ? 42 : 64;
+const MAX_BLOBS = isMobile ? 28 : 42;
+const TEXT_COUNT = isMobile ? 54 : 78;
 const MAX_CANVAS_PIXELS = isMobile ? 5200000 : 14000000;
 
 const pointer = {
@@ -93,6 +94,8 @@ let sceneInitialized = false;
 let resizeFrame = 0;
 let layoutRefreshFrame = 0;
 let animationFrame = 0;
+let scrollRenderFrame = 0;
+let lastRenderAt = 0;
 let isVisualInView = true;
 let lastBottomSeedAt = 0;
 let lastPageEndSeedKey = "";
@@ -104,6 +107,165 @@ function rand(min, max) {
 
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function initInquiryBlob() {
+  const inquiry = document.querySelector(".sticky-inquiry");
+  const inquiryCanvas = inquiry?.querySelector(".sticky-inquiry__blob");
+  const inquiryCtx = inquiryCanvas?.getContext("2d", { alpha: true });
+  if (!inquiry || !inquiryCanvas || !inquiryCtx) return;
+
+  let previousHue = null;
+  let gradientHue = 224;
+  let lastInquiryDrawAt = 0;
+
+  const randomizeColor = () => {
+    let selectedHue;
+
+    do {
+      selectedHue = pick(hues);
+    } while (selectedHue === previousHue);
+
+    previousHue = selectedHue;
+    gradientHue = selectedHue + rand(-8, 8);
+  };
+
+  const drawInquiryBlob = (now) => {
+    const cssWidth = inquiryCanvas.clientWidth;
+    const cssHeight = inquiryCanvas.clientHeight;
+    if (!cssWidth || !cssHeight) return;
+
+    const inquiryDpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const pixelWidth = Math.round(cssWidth * inquiryDpr);
+    const pixelHeight = Math.round(cssHeight * inquiryDpr);
+
+    if (inquiryCanvas.width !== pixelWidth) inquiryCanvas.width = pixelWidth;
+    if (inquiryCanvas.height !== pixelHeight) inquiryCanvas.height = pixelHeight;
+
+    inquiryCtx.setTransform(inquiryDpr, 0, 0, inquiryDpr, 0, 0);
+    inquiryCtx.clearRect(0, 0, cssWidth, cssHeight);
+
+    const t = now * 0.001;
+    const phase = 1.74;
+    const baseRadius = Math.min(cssWidth, cssHeight) * 0.42;
+    const animatedRadius = baseRadius * (1 + Math.sin(t * 0.17 + phase) * 0.045);
+    const morph = Math.sin(t * 0.28 + phase) * 0.025;
+    const hueDrift = Math.sin(t * 0.14 + phase) * 10;
+
+    inquiryCtx.save();
+    inquiryCtx.translate(cssWidth * 0.53, cssHeight * 0.5);
+    inquiryCtx.scale(1.1 + morph, 0.96 - morph * 0.25);
+    inquiryCtx.globalAlpha = 0.92;
+    inquiryCtx.globalCompositeOperation = "source-over";
+
+    const gradient = inquiryCtx.createRadialGradient(0, 0, 0, 0, 0, animatedRadius);
+
+    gradient.addColorStop(0, `hsla(${gradientHue + hueDrift}, 88%, 58%, 0.86)`);
+    gradient.addColorStop(0.22, `hsla(${gradientHue + hueDrift}, 86%, 56%, 0.78)`);
+    gradient.addColorStop(0.5, `hsla(${gradientHue + hueDrift}, 83%, 58%, 0.56)`);
+    gradient.addColorStop(0.74, `hsla(${gradientHue + hueDrift}, 79%, 62%, 0.3)`);
+    gradient.addColorStop(0.9, `hsla(${gradientHue + hueDrift}, 76%, 64%, 0.13)`);
+    gradient.addColorStop(1, `hsla(${gradientHue + hueDrift}, 76%, 64%, 0)`);
+
+    inquiryCtx.fillStyle = gradient;
+    inquiryCtx.beginPath();
+    inquiryCtx.arc(0, 0, animatedRadius, 0, Math.PI * 2);
+    inquiryCtx.fill();
+    inquiryCtx.restore();
+  };
+
+  const animateInquiryBlob = (now) => {
+    const interval = 1000 / (isMobile ? 22 : 28);
+
+    if (now - lastInquiryDrawAt >= interval) {
+      lastInquiryDrawAt = now;
+      drawInquiryBlob(now);
+    }
+
+    requestAnimationFrame(animateInquiryBlob);
+  };
+
+  const startMovement = () => {
+    if (typeof inquiry.animate !== "function") return;
+
+    const mobilePath = window.matchMedia("(max-width: 720px)").matches;
+    const maxX = Math.min(window.innerWidth * (mobilePath ? 0.46 : 0.32), mobilePath ? 166 : 350);
+    const maxY = Math.min(window.innerHeight * (mobilePath ? 0.3 : 0.32), mobilePath ? 200 : 300);
+    const pointCount = mobilePath ? 28 : 34;
+    const minStep = mobilePath ? 17 : 24;
+    const maxStep = mobilePath ? 29 : 38;
+    const points = [{ x: 0, y: 0 }];
+    let x = 0;
+    let y = 0;
+    let angle = rand(Math.PI * 1.08, Math.PI * 1.42);
+
+    for (let index = 1; index < pointCount; index++) {
+      let nextPoint = null;
+
+      for (let attempt = 0; attempt < 24; attempt++) {
+        const nearEdge = x > -minStep || y > -minStep || x < -maxX + minStep || y < -maxY + minStep;
+        const centerAngle = Math.atan2(-maxY * 0.5 - y, -maxX * 0.5 - x);
+        const candidateAngle = nearEdge
+          ? centerAngle + rand(-0.72, 0.72)
+          : angle + rand(-1.08, 1.08);
+        const step = rand(minStep, maxStep);
+        const candidateX = x + Math.cos(candidateAngle) * step;
+        const candidateY = y + Math.sin(candidateAngle) * step;
+
+        if (candidateX > 0 || candidateX < -maxX || candidateY > 0 || candidateY < -maxY) {
+          continue;
+        }
+
+        nextPoint = { x: candidateX, y: candidateY };
+        angle = candidateAngle;
+        break;
+      }
+
+      if (!nextPoint) {
+        const centerAngle = Math.atan2(-maxY * 0.5 - y, -maxX * 0.5 - x);
+        const step = minStep;
+        nextPoint = {
+          x: Math.min(0, Math.max(-maxX, x + Math.cos(centerAngle) * step)),
+          y: Math.min(0, Math.max(-maxY, y + Math.sin(centerAngle) * step))
+        };
+        angle = centerAngle;
+      }
+
+      x = nextPoint.x;
+      y = nextPoint.y;
+      points.push(nextPoint);
+    }
+
+    let totalDistance = 0;
+    const distances = points.map((point, index) => {
+      if (index === 0) return 0;
+
+      const previous = points[index - 1];
+      totalDistance += Math.hypot(point.x - previous.x, point.y - previous.y);
+      return totalDistance;
+    });
+    const speed = mobilePath ? 10 : 12;
+    const frames = points.map((point, index) => ({
+      translate: `${point.x.toFixed(1)}px ${point.y.toFixed(1)}px`,
+      offset: distances[index] / totalDistance
+    }));
+
+    inquiry.animate(frames, {
+      duration: totalDistance / speed * 1000,
+      iterations: Infinity,
+      direction: "alternate",
+      easing: "linear",
+      fill: "both"
+    });
+  };
+
+  randomizeColor();
+  startMovement();
+  requestAnimationFrame(animateInquiryBlob);
+  inquiry.addEventListener("click", () => {
+    randomizeColor();
+    drawInquiryBlob(performance.now());
+  });
 }
 
 function getPageDensity() {
@@ -125,27 +287,29 @@ function resize() {
   const contentBottom = siteShell
     ? siteShell.getBoundingClientRect().bottom + window.scrollY
     : document.documentElement.scrollHeight;
-  const visualBleed = Math.max(window.innerHeight * 0.9, 720);
 
   W = window.innerWidth;
+  VIEW_H = window.innerHeight;
   H = Math.max(
-    contentBottom + visualBleed,
-    document.documentElement.scrollHeight + visualBleed,
-    window.innerHeight
+    contentBottom,
+    VIEW_H
   );
 
   const deviceDpr = window.devicePixelRatio || 1;
-  const pixelSafeDpr = Math.sqrt(MAX_CANVAS_PIXELS / Math.max(1, W * H));
+  const pixelSafeDpr = Math.sqrt(MAX_CANVAS_PIXELS / Math.max(1, W * VIEW_H));
   DPR = Math.max(0.72, Math.min(deviceDpr, isMobile ? 1 : 1.15, pixelSafeDpr));
 
   hero.style.width = `${W}px`;
-  hero.style.height = `${H}px`;
+  hero.style.height = `${VIEW_H}px`;
+
+  const canvasWidth = Math.floor(W * DPR);
+  const canvasHeight = Math.floor(VIEW_H * DPR);
 
   for (const canvas of [textCanvas, blobCanvas]) {
-    canvas.width = Math.floor(W * DPR);
-    canvas.height = Math.floor(H * DPR);
+    if (canvas.width !== canvasWidth) canvas.width = canvasWidth;
+    if (canvas.height !== canvasHeight) canvas.height = canvasHeight;
     canvas.style.width = `${W}px`;
-    canvas.style.height = `${H}px`;
+    canvas.style.height = `${VIEW_H}px`;
   }
 
   textCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -164,7 +328,7 @@ function resize() {
   updateVisualVisibility();
 
   if (Math.abs(H - previousHeight) > 80) {
-    seedPageEndVisuals(true);
+    seedPageEndVisuals();
   }
 
   draw(performance.now() * 0.001);
@@ -227,67 +391,16 @@ class Blob {
   }
 
   draw(ctx, t) {
-    if (isMobile) {
-      this.drawSoftMobile(ctx, t);
-      return;
-    }
-
-    const points = 36;
-    const morph = Math.sin(t * 0.28 + this.phase) * 0.09;
-    const animatedRadius = this.baseRadius * (1 + Math.sin(t * 0.17 + this.phase) * 0.06);
-
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.rot);
-    ctx.scale(this.sx + morph, this.sy - morph * 0.5);
-    ctx.globalAlpha = Math.max(0, this.opacity * this.life);
-    ctx.filter = `blur(${this.blur}px)`;
-
-    ctx.beginPath();
-
-    for (let i = 0; i <= points; i++) {
-      const a = (i / points) * Math.PI * 2;
-      const wave =
-        1 +
-        Math.sin(a * 3 + t * 0.42 + this.phase) * 0.1 +
-        Math.cos(a * 5 - t * 0.24 + this.phase) * 0.07;
-
-      const r = animatedRadius * wave;
-      const x = Math.cos(a) * r;
-      const y = Math.sin(a) * r;
-
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-
-    ctx.closePath();
-
-    const hueShift = this.hue + Math.sin(t * 0.18 + this.phase) * 28;
-    const gradient = ctx.createRadialGradient(
-      -animatedRadius * 0.25,
-      -animatedRadius * 0.2,
-      animatedRadius * 0.05,
-      0,
-      0,
-      animatedRadius * 1.25
-    );
-
-    gradient.addColorStop(0, `hsla(${hueShift + 18}, 98%, 68%, 0.96)`);
-    gradient.addColorStop(0.38, `hsla(${hueShift}, 94%, 56%, 0.72)`);
-    gradient.addColorStop(0.78, `hsla(${hueShift - 28}, 88%, 62%, 0.3)`);
-    gradient.addColorStop(1, `hsla(${hueShift - 34}, 84%, 62%, 0)`);
-
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    ctx.filter = "none";
-    ctx.restore();
+    this.drawSoft(ctx, t);
   }
 
-  drawSoftMobile(ctx, t) {
+  drawSoft(ctx, t) {
     const morph = Math.sin(t * 0.28 + this.phase) * 0.09;
     const animatedRadius = this.baseRadius * (1 + Math.sin(t * 0.17 + this.phase) * 0.06);
-    const petalCount = 5;
+    const petalCount = isMobile ? 5 : 6;
+    const coreAlpha = isMobile ? 0.62 : 0.68;
+    const midAlpha = isMobile ? 0.44 : 0.48;
+    const edgeAlpha = isMobile ? 0.18 : 0.2;
 
     ctx.save();
     ctx.translate(this.x, this.y);
@@ -306,10 +419,10 @@ class Blob {
       const hueShift = this.hue + Math.sin(t * 0.14 + this.phase + i) * 22;
       const gradient = ctx.createRadialGradient(px, py, 0, px, py, petalRadius);
 
-      gradient.addColorStop(0, `hsla(${hueShift + 18}, 98%, 68%, 0.46)`);
-      gradient.addColorStop(0.36, `hsla(${hueShift}, 94%, 56%, 0.32)`);
-      gradient.addColorStop(0.72, `hsla(${hueShift - 28}, 88%, 62%, 0.13)`);
-      gradient.addColorStop(1, `hsla(${hueShift - 34}, 84%, 62%, 0)`);
+      gradient.addColorStop(0, `hsla(${hueShift + 18}, 88%, 68%, ${coreAlpha})`);
+      gradient.addColorStop(0.36, `hsla(${hueShift}, 85%, 56%, ${midAlpha})`);
+      gradient.addColorStop(0.72, `hsla(${hueShift - 28}, 79%, 62%, ${edgeAlpha})`);
+      gradient.addColorStop(1, `hsla(${hueShift - 34}, 76%, 62%, 0)`);
 
       ctx.fillStyle = gradient;
       ctx.beginPath();
@@ -515,8 +628,8 @@ function seedViewport(scrollY = window.scrollY, initial = false) {
   const top = scrollY;
   const bottom = scrollY + window.innerHeight;
   const isNearPageEnd = bottom > document.documentElement.scrollHeight - window.innerHeight * 0.7;
-  const blobCount = initial ? (isMobile ? 3 : 4) : (isMobile ? 1 : 2);
-  const textCount = initial ? (isMobile ? 6 : 8) : blobCount;
+  const blobCount = initial ? (isMobile ? 8 : 12) : (isMobile ? 1 : 2);
+  const textCount = initial ? (isMobile ? 14 : 18) : blobCount;
   const spawnBottom = isNearPageEnd ? bottom + window.innerHeight * 0.42 : bottom - window.innerHeight * 0.08;
 
   for (let i = 0; i < blobCount; i++) {
@@ -548,10 +661,11 @@ function seedPageEndVisuals(force = false) {
     ? footer.getBoundingClientRect().top + window.scrollY
     : pageBottom - window.innerHeight * 0.42;
   const start = Math.max(0, contactTop + window.innerHeight * 0.12);
-  const end = pageBottom + window.innerHeight * 0.22;
+  const clearTail = VIEW_H * 0.22;
+  const end = Math.max(start + 1, pageBottom - clearTail);
   const footerStart = Math.max(0, footerTop - window.innerHeight * 0.22);
-  const blobCount = isMobile ? 14 : 18;
-  const textCount = isMobile ? 9 : 11;
+  const blobCount = isMobile ? 11 : 14;
+  const textCount = isMobile ? 7 : 9;
   const seedKey = [
     Math.round(pageBottom / 80),
     Math.round(footerTop / 80),
@@ -578,7 +692,7 @@ function seedPageEndVisuals(force = false) {
     );
   }
 
-  for (let i = 0; i < (isMobile ? 5 : 7); i++) {
+  for (let i = 0; i < (isMobile ? 3 : 5); i++) {
     spawnBlob(
       rand(-W * 0.06, W * 1.06),
       rand(footerStart, end),
@@ -591,17 +705,17 @@ function seedPageEndVisuals(force = false) {
   const footerAnchors = [
     [0.18, footerStart + window.innerHeight * 0.12, 1.16],
     [0.56, footerMid, 1.42],
-    [0.86, Math.max(footerTop + 80, pageBottom - window.innerHeight * 0.22), 1.34]
+    [0.86, Math.max(footerTop + 80, pageBottom - VIEW_H * 0.42), 1.34]
   ];
 
   footerAnchors.forEach(([xRatio, y, scale]) => {
     spawnBlob(W * xRatio, y, scale, false);
   });
 
-  for (let i = 0; i < (isMobile ? 3 : 4); i++) {
+  for (let i = 0; i < (isMobile ? 2 : 3); i++) {
     spawnText(
       rand(-W * 0.04, W * 0.9),
-      rand(footerStart, pageBottom),
+      rand(footerStart, end),
       false
     );
   }
@@ -648,18 +762,6 @@ function spawnPointerVisuals(x, y) {
   spawnText(textX, textY);
 }
 
-function ensureBottomVisualAt(y) {
-  const siteShell = document.querySelector(".site-shell");
-  const pageBottom = siteShell
-    ? siteShell.getBoundingClientRect().bottom + window.scrollY
-    : document.documentElement.scrollHeight;
-
-  if (y < pageBottom - window.innerHeight * 1.2) return;
-
-  spawnBlob(rand(-W * 0.05, W * 1.05), rand(y - 120, pageBottom + 120), rand(0.95, 1.2), false);
-  spawnText(rand(-W * 0.05, W * 0.92), rand(y - 100, pageBottom + 80), false);
-}
-
 function spawnScrollVisuals() {
   if (prefersReducedMotion) return;
 
@@ -690,19 +792,38 @@ function update(dt, t) {
 }
 
 function draw(t) {
-  textCtx.clearRect(0, 0, W, H);
-  blobCtx.clearRect(0, 0, W, H);
+  textCtx.clearRect(0, 0, W, VIEW_H);
+  blobCtx.clearRect(0, 0, W, VIEW_H);
+  const viewportTop = window.scrollY;
+  const viewportBottom = viewportTop + VIEW_H;
 
   // text layer
+  textCtx.save();
+  textCtx.translate(0, -viewportTop);
   for (const text of texts) {
+    const textHeight = text.rowCount * text.size * 1.1;
+    if (text.y + textHeight < viewportTop - 180 || text.y > viewportBottom + 180) continue;
     text.draw(textCtx, t);
   }
+  textCtx.restore();
 
   // blob layer
+  blobCtx.save();
+  blobCtx.translate(0, -viewportTop);
   blobCtx.globalCompositeOperation = "source-over";
   for (const blob of blobs) {
+    const blobExtent = blob.radius * 2.6;
+    if (blob.y + blobExtent < viewportTop || blob.y - blobExtent > viewportBottom) continue;
     blob.draw(blobCtx, t);
   }
+  blobCtx.restore();
+}
+
+function renderFrame(now = performance.now()) {
+  if (now - lastRenderAt < 8) return;
+
+  lastRenderAt = now;
+  draw(now * 0.001);
 }
 
 let last = performance.now();
@@ -727,10 +848,8 @@ function animate(now) {
   const dt = Math.min(delta / 1000, 0.045);
   last = now - (delta % frameInterval);
 
-  const t = now * 0.001;
-
-  update(dt, t);
-  draw(t);
+  update(dt, now * 0.001);
+  renderFrame(now);
 }
 
 function updatePointer(event) {
@@ -929,7 +1048,6 @@ window.addEventListener("pointerdown", (event) => {
 
   playPointerAudio();
   spawnPointerVisuals(pointer.x, pointer.y);
-  ensureBottomVisualAt(pointer.y);
 }, { passive: true });
 
 window.addEventListener("touchstart", (event) => {
@@ -943,7 +1061,6 @@ window.addEventListener("touchstart", (event) => {
 
   playPointerAudio();
   spawnPointerVisuals(pointer.x, pointer.y);
-  ensureBottomVisualAt(pointer.y);
 }, { passive: true });
 
 window.addEventListener("pointerup", () => {
@@ -984,16 +1101,18 @@ function scheduleResize() {
 }
 
 function scheduleLayoutRefresh() {
+  if (document.querySelector("[data-custom-select].is-open")) return;
   if (layoutRefreshFrame) return;
 
   layoutRefreshFrame = requestAnimationFrame(() => {
     layoutRefreshFrame = 0;
+    if (document.querySelector("[data-custom-select].is-open")) return;
     scheduleResize();
 
     requestAnimationFrame(() => {
       if (!sceneInitialized) return;
 
-      seedPageEndVisuals(true);
+      seedPageEndVisuals();
       draw(performance.now() * 0.001);
     });
   });
@@ -1025,14 +1144,18 @@ function handleScroll() {
   spawnScrollVisuals();
 
   const now = performance.now();
-  const siteShell = document.querySelector(".site-shell");
-  const pageBottom = siteShell
-    ? siteShell.getBoundingClientRect().bottom + window.scrollY
-    : document.documentElement.scrollHeight;
+  const pageBottom = H;
 
   if (window.scrollY + window.innerHeight > pageBottom - window.innerHeight * 1.05 && now - lastBottomSeedAt > 900) {
     lastBottomSeedAt = now;
     seedPageEndVisuals();
+  }
+
+  if (!scrollRenderFrame) {
+    scrollRenderFrame = requestAnimationFrame((frameNow) => {
+      scrollRenderFrame = 0;
+      renderFrame(frameNow);
+    });
   }
 }
 
@@ -1341,6 +1464,7 @@ function initShowreelControls() {
   window.addEventListener("load", setInitialLoopPosition, { once: true });
 }
 
+initInquiryBlob();
 addClickPulse(".home-mark, .sticky-inquiry");
 initCustomSelects();
 initFormPerformanceMode();

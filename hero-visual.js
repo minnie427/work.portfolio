@@ -1,6 +1,47 @@
 const hero = document.getElementById("heroVisual");
 const textCanvas = document.getElementById("textCanvas");
 const blobCanvas = document.getElementById("blobCanvas");
+const STORAGE_KEY = "minnieWorkLanguage";
+
+function getStoredLanguage() {
+  const stored = window.localStorage.getItem(STORAGE_KEY);
+  return stored === "ko" || stored === "en" ? stored : null;
+}
+
+function getBrowserLanguagePreference() {
+  const languages = [navigator.language || "", ...(navigator.languages || [])];
+  return languages.some((language) => language.toLowerCase().startsWith("ko")) ? "ko" : "en";
+}
+
+function initLanguageRouting() {
+  const isEnglishPage = window.location.pathname.startsWith("/en");
+  const isRootPage = window.location.pathname === "/" || window.location.pathname === "/index.html";
+  const storedLanguage = getStoredLanguage();
+
+  if (storedLanguage === "en" && isRootPage) {
+    window.location.replace("/en/");
+    return true;
+  }
+
+  if (!storedLanguage && !isEnglishPage && isRootPage) {
+    const browserPreference = getBrowserLanguagePreference();
+    if (browserPreference === "en") {
+      window.location.replace("/en/");
+      return true;
+    }
+  }
+
+  document.querySelectorAll(".lang-switcher").forEach((link) => {
+    link.addEventListener("click", () => {
+      const targetLanguage = link.getAttribute("href")?.includes("/en/") ? "en" : "ko";
+      window.localStorage.setItem(STORAGE_KEY, targetLanguage);
+    });
+  });
+
+  return false;
+}
+
+initLanguageRouting();
 
 const textCtx = textCanvas.getContext("2d", { alpha: true });
 const blobCtx = blobCanvas.getContext("2d", { alpha: true });
@@ -1227,16 +1268,27 @@ function initCustomSelects() {
       if (emptySelect) {
         const select = emptySelect.closest("[data-custom-select]");
         const trigger = select?.querySelector(".custom-select-trigger");
-        const label = select?.querySelector("span")?.textContent?.trim() || "필수 항목";
+        const locale = document.documentElement.lang === "en" ? "en" : "ko";
+        const label = select?.querySelector("span")?.textContent?.trim() || (locale === "en" ? "Required field" : "필수 항목");
 
         select?.classList.add("is-open");
         trigger?.setAttribute("aria-expanded", "true");
         trigger?.focus();
-        alert(`${label}을 선택해 주세요.`);
+        alert(locale === "en" ? `${label} is required.` : `${label}을 선택해 주세요.`);
         return;
       }
 
-      if (!form.reportValidity()) return;
+      if (!form.reportValidity()) {
+    const locale = document.documentElement.lang === "en" ? "en" : "ko";
+    if (status) {
+      status.textContent = locale === "en"
+        ? "Please complete the required fields."
+        : "필수 항목을 모두 입력해 주세요.";
+      status.classList.remove("is-success");
+      status.classList.add("is-error");
+    }
+    return;
+  }
 
       await submitContactForm(form);
     });
@@ -1247,17 +1299,22 @@ async function submitContactForm(form) {
   const status = form.querySelector(".form-status");
   const submitButton = form.querySelector("button[type='submit']");
   const formData = new FormData(form);
+  const locale = document.documentElement.lang === "en" ? "en" : "ko";
+  const subjectInput = form.querySelector('input[name="_subject"]');
+  const defaultSubject = locale === "en"
+    ? "work.minniepark.art — English Project Inquiry"
+    : "work.minniepark.art 프로젝트 문의";
 
-  formData.set("_subject", `work.minniepark.art 프로젝트 문의 — ${formData.get("name") || "새 문의"}`);
+  formData.set("_subject", subjectInput?.value || defaultSubject);
 
   if (status) {
-    status.textContent = "문의 내용을 전송하는 중입니다.";
+    status.textContent = locale === "en" ? "Sending your enquiry…" : "문의 내용을 전송하는 중입니다.";
     status.classList.remove("is-error", "is-success");
   }
 
   if (submitButton) {
     submitButton.disabled = true;
-    submitButton.textContent = "전송 중";
+    submitButton.textContent = locale === "en" ? "Sending…" : "전송 중";
   }
 
   try {
@@ -1285,7 +1342,9 @@ async function submitContactForm(form) {
     });
 
     if (status) {
-      status.textContent = "문의가 등록되었습니다. 확인 후 이메일로 답변드릴게요.";
+      status.textContent = locale === "en"
+        ? "Thank you. Your enquiry has been sent."
+        : "문의가 등록되었습니다. 확인 후 이메일로 답변드릴게요.";
       status.classList.add("is-success");
     }
 
@@ -1296,13 +1355,15 @@ async function submitContactForm(form) {
     draw(performance.now() * 0.001);
   } catch (error) {
     if (status) {
-      status.textContent = "전송에 실패했습니다. 잠시 후 다시 시도하거나 카톡 문의하기를 이용해 주세요.";
+      status.textContent = locale === "en"
+        ? "Something went wrong. Please try again or email minniepark.studio@gmail.com."
+        : "전송에 실패했습니다. 잠시 후 다시 시도하거나 카톡 문의하기를 이용해 주세요.";
       status.classList.add("is-error");
     }
   } finally {
     if (submitButton) {
       submitButton.disabled = false;
-      submitButton.textContent = "빠른 답변받기";
+      submitButton.textContent = locale === "en" ? "Send Project Inquiry" : "문의 보내기";
     }
   }
 }

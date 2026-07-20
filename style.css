@@ -77,6 +77,21 @@ a {
   z-index: 2;
 }
 
+.lang-switcher {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: clamp(12px, 1.8vw, 18px);
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--muted);
+}
+
+
 .home-mark {
   position: fixed;
   top: clamp(18px, 2.6vw, 30px);
@@ -330,6 +345,9 @@ body.is-hint-gone .interaction-hint {
 }
 
 .landing-top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   max-width: 980px;
 }
 
@@ -341,13 +359,13 @@ body.is-hint-gone .interaction-hint {
 .section-kicker,
 .work-index,
 .en-title {
-  margin: 0;
+  margin: 0 0 0 4px;
   font-size: clamp(11px, 1.7vw, 13px);
   line-height: 1.2;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--black);
 }
 
 h1,
@@ -358,7 +376,7 @@ p {
 }
 
 h1 {
-  margin-bottom: clamp(8px, 1.5vw, 18px);
+  margin: 0 0 clamp(8px, 1.5vw, 18px) 0;
   font-size: clamp(50px, 7vw, 92px);
   line-height: 0.84;
   letter-spacing: -0.055em;
@@ -924,6 +942,10 @@ footer p {
 
   .showreel-nav {
     display: none;
+  }
+
+  .lang-switcher {
+    margin-bottom: 12px;
   }
 
   .home-mark {

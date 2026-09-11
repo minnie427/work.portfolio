@@ -1,0 +1,25 @@
+/* Scoped to service entry pages; the established landing page stays unchanged. */
+.service-page .service-header,
+.service-page .service-footer { padding: 28px var(--page-pad); }
+.service-page .service-header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--faint); }
+.service-page .service-header a { text-decoration: none; font-weight: 700; }
+.service-page .service-header span { display: block; font-size: 12px; font-weight: 400; }
+.service-page .service-hero { padding: clamp(40px, 6vw, 88px) var(--page-pad) 40px; }
+.service-page h1 { max-width: 1100px; margin: 14px 0 24px; font-size: clamp(34px, 5.2vw, 78px); line-height: 1.08; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.service-page .service-hero > p:not(.section-kicker) { max-width: 780px; font-size: clamp(16px, 1.5vw, 20px); line-height: 1.65; }
+.service-page .contact-actions { margin-top: 26px; }
+.service-page .service-image { margin: 0 var(--page-pad); }
+.service-page .service-image img { display: block; width: 100%; max-height: 70vh; object-fit: contain; background: var(--black); }
+.service-page .service-detail { max-width: 940px; margin: 0 auto; padding: clamp(30px, 5vw, 64px) var(--page-pad); border-bottom: 1px solid var(--faint); }
+.service-page .service-detail h2 { margin: 0 0 22px; font-size: clamp(24px, 2.7vw, 36px); line-height: 1.2; }
+.service-page .service-detail h3 { margin: 28px 0 10px; font-size: 18px; line-height: 1.4; }
+.service-page .service-detail p,
+.service-page .service-detail li { font-size: 16px; line-height: 1.8; }
+.service-page .service-detail li { margin-bottom: 10px; }
+.service-page .service-footer { margin-top: 34px; font-size: 14px; }
+.service-page a:hover { text-decoration: underline; text-underline-offset: .2em; }
+.service-page a:focus-visible { outline: 2px solid currentColor; outline-offset: 5px; }
+@media (max-width: 600px) {
+  .service-page .service-header { padding-top: 20px; padding-bottom: 20px; }
+  .service-page .contact-actions { align-items: flex-start; flex-direction: column; }
+}

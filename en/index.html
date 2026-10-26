@@ -275,16 +275,16 @@ Enquiries are welcome for launches, pop-ups, listening sessions, exhibitions, wo
       <form class="contact-form" action="https://formsubmit.co/ajax/minniepark.studio@gmail.com" method="post">
         <input type="hidden" name="_subject" value="work.minniepark.art — English Project Inquiry" />
         <input type="hidden" name="language" value="English" />
+        <input type="hidden" name="_url" value="https://work.minniepark.art/en/" />
         <input type="hidden" name="_template" value="table" />
-        <input type="hidden" name="_captcha" value="false" />
-        <input class="form-honey" type="text" name="_honey" tabindex="-1" autocomplete="off" />
+        <input class="form-honey" type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
         <label>
           <span>Name / Company</span>
-          <input type="text" name="name" autocomplete="name" required />
+          <input type="text" name="name" autocomplete="name" maxlength="200" required />
         </label>
         <label>
           <span>Email</span>
-          <input type="email" name="email" autocomplete="email" required />
+          <input type="email" name="email" autocomplete="email" maxlength="254" required />
         </label>
         <div class="custom-select" data-custom-select>
           <span>Project Type</span>
@@ -312,7 +312,7 @@ Enquiries are welcome for launches, pop-ups, listening sessions, exhibitions, wo
         </div>
         <label>
           <span>Project Details</span>
-          <textarea name="message" rows="6" required></textarea>
+          <textarea name="message" rows="6" maxlength="20000" required></textarea>
         </label>
         <button type="submit">Send Project Inquiry</button>
         <p class="form-status" role="status" aria-live="polite"></p>
@@ -335,6 +335,6 @@ Enquiries are welcome for launches, pop-ups, listening sessions, exhibitions, wo
     <div class="post-footer-visual-space" id="postFooterVisual" aria-hidden="true"></div>
   </main>
 
-  <script src="../hero-visual.js?v=20260715-1"></script>
+  <script src="../hero-visual.js?v=20261027-form-1"></script>
 </body>
 </html>

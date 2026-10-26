@@ -1240,6 +1240,7 @@ function initCustomSelects() {
         select.classList.add("has-value");
         select.classList.remove("is-open");
         trigger.setAttribute("aria-expanded", "false");
+        trigger.removeAttribute("aria-invalid");
 
         options.forEach((item) => item.setAttribute("aria-selected", "false"));
         option.setAttribute("aria-selected", "true");
@@ -1258,46 +1259,75 @@ function initCustomSelects() {
   });
 
   document.querySelectorAll(".contact-form").forEach((form) => {
+    form.addEventListener("invalid", () => {
+      const locale = document.documentElement.lang === "en" ? "en" : "ko";
+      setContactStatus(form, locale === "en"
+        ? "Please check the required fields and email address."
+        : "필수 항목과 이메일 주소를 확인해 주세요.", "error");
+    }, true);
+
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-
-      const emptySelect = Array
-        .from(form.querySelectorAll("[data-custom-select] input[required]"))
-        .find((input) => !input.value);
-
-      if (emptySelect) {
-        const select = emptySelect.closest("[data-custom-select]");
-        const trigger = select?.querySelector(".custom-select-trigger");
-        const locale = document.documentElement.lang === "en" ? "en" : "ko";
-        const label = select?.querySelector("span")?.textContent?.trim() || (locale === "en" ? "Required field" : "필수 항목");
-
-        select?.classList.add("is-open");
-        trigger?.setAttribute("aria-expanded", "true");
-        trigger?.focus();
-        alert(locale === "en" ? `${label} is required.` : `${label}을 선택해 주세요.`);
-        return;
-      }
-
-      if (!form.reportValidity()) {
-    const locale = document.documentElement.lang === "en" ? "en" : "ko";
-    if (status) {
-      status.textContent = locale === "en"
-        ? "Please complete the required fields."
-        : "필수 항목을 모두 입력해 주세요.";
-      status.classList.remove("is-success");
-      status.classList.add("is-error");
-    }
-    return;
-  }
-
       await submitContactForm(form);
     });
   });
 }
 
-async function submitContactForm(form) {
+function setContactStatus(form, message, state) {
   const status = form.querySelector(".form-status");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.remove("is-error", "is-success");
+  if (state) status.classList.add(`is-${state}`);
+}
+
+function validateContactForm(form) {
+  const locale = document.documentElement.lang === "en" ? "en" : "ko";
+  // UX checks only: a direct POST can bypass every check in this file.
+  // Removing _captcha=false does NOT establish CAPTCHA verification for AJAX.
+  if (form.elements.namedItem("_honey")?.value) return false;
+
+  for (const [name, maxLength] of [["name", 200], ["email", 254], ["message", 20000]]) {
+    const input = form.elements.namedItem(name);
+    if (!input || !input.value.trim() || input.value.length > maxLength) {
+      setContactStatus(form, locale === "en"
+        ? "Please complete the required fields within the permitted length."
+        : "필수 항목을 허용된 길이 안에서 입력해 주세요.", "error");
+      input?.focus();
+      return false;
+    }
+  }
+
+  const emptySelect = Array
+    .from(form.querySelectorAll("[data-custom-select] input[required]"))
+    .find((input) => {
+      const options = input.closest("[data-custom-select]").querySelectorAll("[role='option']");
+      return !Array.from(options).some((option) =>
+        input.value === (option.dataset.value || option.textContent.trim())
+      );
+    });
+
+  if (emptySelect) {
+    const select = emptySelect.closest("[data-custom-select]");
+    const trigger = select.querySelector(".custom-select-trigger");
+    const label = select.querySelector("span").textContent.trim();
+    select.classList.add("is-open");
+    trigger.setAttribute("aria-expanded", "true");
+    trigger.setAttribute("aria-invalid", "true");
+    trigger.focus();
+    setContactStatus(form, locale === "en"
+      ? `Please select ${label.toLowerCase()}.`
+      : `${label}을 선택해 주세요.`, "error");
+    return false;
+  }
+
+  return form.reportValidity();
+}
+
+async function submitContactForm(form) {
   const submitButton = form.querySelector("button[type='submit']");
+  if (submitButton?.disabled || !validateContactForm(form)) return;
+
   const formData = new FormData(form);
   const locale = document.documentElement.lang === "en" ? "en" : "ko";
   const subjectInput = form.querySelector('input[name="_subject"]');
@@ -1306,21 +1336,25 @@ async function submitContactForm(form) {
     : "work.minniepark.art 프로젝트 문의";
 
   formData.set("_subject", subjectInput?.value || defaultSubject);
-
-  if (status) {
-    status.textContent = locale === "en" ? "Sending your enquiry…" : "문의 내용을 전송하는 중입니다.";
-    status.classList.remove("is-error", "is-success");
+  for (const name of ["name", "email", "message"]) {
+    formData.set(name, formData.get(name).trim());
   }
+  setContactStatus(form, locale === "en" ? "Sending your enquiry…" : "문의 내용을 전송하는 중입니다.");
 
   if (submitButton) {
     submitButton.disabled = true;
     submitButton.textContent = locale === "en" ? "Sending…" : "전송 중";
   }
 
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 30000);
   try {
     const response = await fetch(form.action, {
       method: "POST",
       body: formData,
+      signal: controller.signal,
+      credentials: "omit",
+      redirect: "error",
       headers: {
         Accept: "application/json"
       }
@@ -1328,6 +1362,13 @@ async function submitContactForm(form) {
 
     if (!response.ok) {
       throw new Error("Form submission failed");
+    }
+
+    // A 2xx may still contain a provider rejection or an activation notice.
+    // Never discard the user's enquiry without an explicit success response.
+    const result = await response.json();
+    if (result.success !== true && result.success !== "true") {
+      throw new Error("Form provider did not confirm acceptance");
     }
 
     form.reset();
@@ -1338,15 +1379,13 @@ async function submitContactForm(form) {
       select.classList.remove("has-value", "is-open");
       trigger.textContent = "";
       trigger.setAttribute("aria-expanded", "false");
+      trigger.removeAttribute("aria-invalid");
       options.forEach((option) => option.setAttribute("aria-selected", "false"));
     });
 
-    if (status) {
-      status.textContent = locale === "en"
-        ? "Thank you. Your enquiry has been sent."
-        : "문의가 등록되었습니다. 확인 후 이메일로 답변드릴게요.";
-      status.classList.add("is-success");
-    }
+    setContactStatus(form, locale === "en"
+      ? "Thank you. Your enquiry has been sent."
+      : "문의가 등록되었습니다. 확인 후 이메일로 답변드릴게요.", "success");
 
     isFormActive = false;
     document.body.classList.remove("is-form-active");
@@ -1354,13 +1393,13 @@ async function submitContactForm(form) {
     seedPageEndVisuals();
     draw(performance.now() * 0.001);
   } catch (error) {
-    if (status) {
-      status.textContent = locale === "en"
-        ? "Something went wrong. Please try again or email minniepark.studio@gmail.com."
-        : "전송에 실패했습니다. 잠시 후 다시 시도하거나 카톡 문의하기를 이용해 주세요.";
-      status.classList.add("is-error");
-    }
+    // A lost response does not prove that the server rejected the message.
+    // Keep all fields and do not retry automatically (avoids duplicate emails).
+    setContactStatus(form, locale === "en"
+      ? "We couldn't confirm delivery. Your details have been kept. Please try again later or email minniepark.studio@gmail.com; mention this attempt to avoid a duplicate enquiry."
+      : "전송 완료를 확인하지 못했습니다. 입력 내용은 유지됩니다. 잠시 후 다시 시도하거나 이메일·카톡으로 문의하시고, 중복 확인을 위해 방금 전송을 시도했다고 알려 주세요.", "error");
   } finally {
+    window.clearTimeout(timeout);
     if (submitButton) {
       submitButton.disabled = false;
       submitButton.textContent = locale === "en" ? "Send Project Inquiry" : "문의 보내기";
